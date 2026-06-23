@@ -737,6 +737,7 @@ elif section == "💰 Финансовый Хаб":
         t_type = st.radio("Тип операции", ["Доход", "Расход"], horizontal=True)
         amount = st.number_input("Сумма (₸)", min_value=0.0, value=0.0, step=1000.0)
         category = st.selectbox("Выбор категории", ["Бизнес/SaaS 🚀", "Серверы/IT-Инструменты 🌐", "Маркетинг 📊", "Личное 🍕", "Другое 💎"])
+        category = st.selectbox("Выбор категории", ["Серверы/IT-Инструменты 🌐", "Еда/Продукты 🍕", "Спорт/Здоровье 🏋️", "Обучение 📚", "Развлечения/Отдых 🎮", "Долги/Кредиты 💸", "Другое 🎰"])
         description = st.text_input("Комментарий", placeholder="Например: Покупка серверов...")
         fin_submitted = st.form_submit_button("Зарегистрировать операцию", use_container_width=True)
         
