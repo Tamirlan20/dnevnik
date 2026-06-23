@@ -199,37 +199,413 @@ def seed_demo_tour():
             conn.cursor().execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('onboarding_completed', 'True')")
             conn.commit()
 
-# --- ИНИЦИАЛИЗАЦИЯ СТИЛЕЙ СТРАНИЦЫ ---
-st.set_page_config(page_title="Пространство Фокуса | SaaS", page_icon="🪐", layout="centered")
+# --- ИНИЦИАЛИЗАЦИЯ СТИЛЕЙ СТРАНИЦЫ С ПОЛНОЙ МОБИЛЬНОЙ ОПТИМИЗАЦИЕЙ ---
+st.set_page_config(page_title="Пространство Фокуса | SaaS", page_icon="🪐", layout="wide", initial_sidebar_state="auto")
 init_db()
 seed_demo_tour() 
 
 st.markdown("""
     <style>
-    /* ... (ваши существующие стили) ... */
-
-    /* Адаптивность для мобильных */
-    @media (max-width: 600px) {
-        .kpi-container { flex-direction: column; }
-        .saas-title { font-size: 1.8rem !important; }
-        .task-box { padding: 15px !important; }
-        .finance-row { flex-direction: column; align-items: flex-start !important; gap: 10px; }
-    }
-
-    /* Исправление "обрезания" контента */
-    [data-testid="stAppViewContainer"] {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    /* === БАЗОВЫЕ СТИЛИ === */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background: radial-gradient(circle at 50% 0%, #1a103c 0%, #0b0f19 60%, #020408 100%) !important;
+        color: #f8fafc !important;
+        font-family: 'Inter', sans-serif !important;
     }
     
-    /* Улучшение форм на мобильных */
-    .stForm { width: 100% !important; }
-    
-    /* Скрываем кастомный курсор на мобильных (там нет мыши) */
-    @media (pointer: coarse) {
-        *, *:hover { cursor: auto !important; }
+    html, body, [data-testid="stAppViewContainer"], .stApp, 
+    a, button, input, textarea, select, [role="button"],
+    .stSelectbox, div[data-baseweb="select"], .stButton button,
+    iframe, [data-testid="stSidebar"], .stTextInput input, .stTextArea textarea {
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="url(%23grad)" filter="drop-shadow(0px 0px 3px %233279FF)"/><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%233279FF;stop-opacity:1" /><stop offset="100%" style="stop-color:%237B3EFF;stop-opacity:1" /></linearGradient></defs></svg>') 7 7, auto !important;
     }
-</style>
+    
+    /* === САЙДБАР === */
+    [data-testid="stSidebar"] {
+        background: rgba(11, 15, 25, 0.7) !important;
+        backdrop-filter: blur(25px) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* === ЗАГОЛОВКИ === */
+    .saas-title {
+        background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: 800; font-size: 2.8rem; letter-spacing: -0.04em; margin-bottom: 5px;
+    }
+    .saas-subtitle { 
+        color: #94a3b8; 
+        font-size: 1.05rem; 
+        margin-bottom: 35px;
+    }
+    
+    /* === ФОРМЫ === */
+    div[data-testid="stForm"] {
+        background: rgba(15, 22, 42, 0.4) !important; 
+        backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important; 
+        border-radius: 20px !important; 
+        padding: 30px !important;
+    }
+    
+    div[data-testid="stTextInput"] input, 
+    div[data-testid="stTextArea"] textarea, 
+    div[data-baseweb="select"] div {
+        background-color: rgba(7, 10, 19, 0.7) !important; 
+        color: #ffffff !important;
+        font-size: 1rem !important;
+        min-height: 44px !important;
+        padding: 12px 14px !important;
+    }
+    
+    .stTextInput, .stTextArea, .stSelectbox {
+        margin-bottom: 16px !important;
+    }
+    
+    /* === КНОПКИ (мобильный размер минимум 44px) === */
+    .stButton button {
+        background: rgba(255, 255, 255, 0.07) !important; 
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important; 
+        border-radius: 12px !important;
+        min-height: 44px !important;
+        font-weight: 500 !important;
+        padding: 12px 20px !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stButton button:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+        transform: translateY(-1px);
+    }
+    
+    .stFormSubmitButton button { 
+        background: linear-gradient(135deg, #3279FF 0%, #7B3EFF 100%) !important;
+        min-height: 48px !important;
+        font-weight: 600 !important;
+    }
+    
+    /* === KPI КОНТЕЙНЕРЫ === */
+    .kpi-container { 
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px; 
+        margin-bottom: 25px;
+    }
+    
+    .kpi-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        border-radius: 14px; 
+        padding: 16px 20px;
+    }
+    
+    .kpi-val {
+        font-size: 1.8rem; 
+        font-weight: 700;
+        background: linear-gradient(135deg, #3279FF 0%, #a5b4fc 100%); 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent;
+    }
+    
+    /* === КАРТОЧКИ ЗАДАЧ === */
+    .task-box {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        border-radius: 18px; 
+        padding: 16px 20px; 
+        margin-bottom: 12px; 
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .task-completed {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
+        border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    }
+    
+    .task-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        word-break: break-word;
+        word-wrap: break-word;
+    }
+    
+    .task-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    /* === КАРТОЧКИ ЗАМЕТОК === */
+    .note-box {
+        background: linear-gradient(135deg, rgba(123, 62, 255, 0.06) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
+        border: 1px solid rgba(123, 62, 255, 0.2) !important; 
+        border-radius: 16px; 
+        padding: 16px; 
+        margin-bottom: 15px;
+    }
+    
+    /* === ФИНАНСОВЫЕ СТРОКИ === */
+    .finance-row {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: rgba(15, 22, 42, 0.3); 
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 14px 16px; 
+        border-radius: 12px; 
+        margin-bottom: 8px;
+    }
+    
+    .finance-left {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .finance-amount {
+        min-width: 100px;
+        text-align: right;
+        font-weight: 700;
+    }
+    
+    /* === БЕЙДЖИ === */
+    .custom-badge {
+        background: rgba(15, 23, 42, 0.8); 
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 6px 12px; 
+        border-radius: 20px; 
+        font-size: 0.75rem; 
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    
+    /* === ПОМОДОРО КОНТЕЙНЕР === */
+    .pomo-container {
+        background: rgba(30, 27, 75, 0.4); 
+        border: 1px solid rgba(123, 62, 255, 0.2);
+        padding: 15px; 
+        border-radius: 15px; 
+        text-align: center; 
+        margin-top: 25px;
+    }
+    
+    .pomo-time { 
+        font-size: 2rem; 
+        font-weight: 800; 
+        color: #ff4b4b; 
+        font-family: monospace;
+    }
+    
+    /* === ПРОГРЕСС БАР === */
+    .stProgress > div > div > div > div { 
+        background: linear-gradient(to right, #3279FF, #7B3EFF) !important; 
+    }
+    
+    /* ========== МОБИЛЬНАЯ ОПТИМИЗАЦИЯ (max-width: 768px) ========== */
+    @media (max-width: 768px) {
+        .saas-title {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        
+        .saas-subtitle {
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        
+        div[data-testid="stForm"] {
+            padding: 20px !important;
+            border-radius: 16px !important;
+        }
+        
+        .kpi-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .kpi-card {
+            padding: 14px 16px;
+        }
+        
+        .kpi-val {
+            font-size: 1.5rem;
+        }
+        
+        .task-box {
+            padding: 12px 16px;
+            border-radius: 14px;
+        }
+        
+        .task-title {
+            font-size: 1rem;
+        }
+        
+        .task-badges {
+            gap: 6px;
+        }
+        
+        .custom-badge {
+            font-size: 0.7rem;
+            padding: 5px 10px;
+        }
+        
+        .note-box {
+            padding: 12px;
+            border-radius: 12px;
+        }
+        
+        .finance-row {
+            padding: 12px;
+            border-radius: 10px;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .finance-left {
+            width: 100%;
+        }
+        
+        .finance-amount {
+            width: 100%;
+            text-align: left;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .pomo-time {
+            font-size: 1.8rem;
+        }
+    }
+    
+    /* ========== НЕБОЛЬШИЕ ЭКРАНЫ (max-width: 480px) ========== */
+    @media (max-width: 480px) {
+        html, body, [data-testid="stAppViewContainer"], .stApp {
+            padding: 0 !important;
+        }
+        
+        .saas-title {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .saas-subtitle {
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+        
+        div[data-testid="stForm"] {
+            padding: 16px !important;
+            border-radius: 12px !important;
+            margin-left: -16px !important;
+            margin-right: -16px !important;
+            border-radius: 0 !important;
+        }
+        
+        .kpi-container {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .kpi-card {
+            padding: 12px 14px;
+        }
+        
+        .kpi-val {
+            font-size: 1.3rem;
+        }
+        
+        .task-box {
+            padding: 12px 14px;
+            gap: 10px;
+            border-radius: 12px;
+        }
+        
+        .task-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        
+        .task-badges {
+            gap: 5px;
+        }
+        
+        .custom-badge {
+            font-size: 0.65rem;
+            padding: 4px 8px;
+        }
+        
+        .note-box {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        
+        .finance-row {
+            padding: 12px;
+            gap: 8px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .finance-left {
+            width: 100%;
+            gap: 8px;
+        }
+        
+        .finance-amount {
+            font-size: 1rem;
+        }
+        
+        .pomo-time {
+            font-size: 1.5rem;
+        }
+        
+        .pomo-container {
+            padding: 12px;
+            margin-top: 15px;
+        }
+        
+        [data-testid="stButton"] {
+            width: 100%;
+        }
+        
+        .stButton button {
+            width: 100% !important;
+            min-height: 48px !important;
+        }
+    }
+    
+    /* === УЛУЧШЕНИЯ ДЛЯ ВСЕХ ЭКРАНОВ === */
+    .stRadio {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .stSlider {
+        margin-bottom: 16px;
+    }
+    
+    /* Обеспечиваем читаемость на всех размерах */
+    p, div, span {
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
 DAYS_ORDER = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
@@ -312,11 +688,11 @@ if section == "📝 Мой Планшет":
             <div class="kpi-val">{}%</div>
         </div>
         <div class="kpi-card">
-            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Завершено Смарт-Целей</div>
+            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Завершено</div>
             <div class="kpi-val" style="background: linear-gradient(135deg, #10b981 0%, #6ee7b7 100%); -webkit-background-clip: text;">{} / {}</div>
         </div>
         <div class="kpi-card">
-            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Активный фокус</div>
+            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Активный</div>
             <div class="kpi-val" style="background: linear-gradient(135deg, #f59e0b 0%, #fcd34d 100%); -webkit-background-clip: text;">{}</div>
         </div>
     </div>
@@ -327,13 +703,17 @@ if section == "📝 Мой Планшет":
     st.write("")
 
     with st.form("task_form", clear_on_submit=True):
-        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-        with col1: task_text = st.text_input("Название фокуса", placeholder="Например: Отредактировать конфигурационные скрипты")
-        with col2: category = st.selectbox("Сфера", ["Работа", "Личное", "Учёба", "Спорт", "Другое"])
-        with col3: day_of_week = st.selectbox("Период времени", ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"])
-        with col4: priority = st.selectbox("Приоритет", ["Высокий 🔥", "Средний ⚡", "Низкий 🎯"])
-        task_notes = st.text_area("Контекст и Markdown-спецификации")
-        submitted = st.form_submit_button("Интегрировать в систему")
+        task_text = st.text_input("Название фокуса", placeholder="Например: Отредактировать конфигурационные скрипты")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            category = st.selectbox("Сфера", ["Работа", "Личное", "Учёба", "Спорт", "Другое"])
+        with col2:
+            priority = st.selectbox("Приоритет", ["Высокий 🔥", "Средний ⚡", "Низкий 🎯"])
+        
+        day_of_week = st.selectbox("Период времени", ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"])
+        task_notes = st.text_area("Контекст и спецификации", height=100)
+        submitted = st.form_submit_button("Интегрировать в систему", use_container_width=True)
             
     if submitted and task_text.strip():
         add_task(task_text.strip(), category, day_of_week, task_notes.strip(), priority)
@@ -349,40 +729,47 @@ if section == "📝 Мой Планшет":
             with st.container():
                 st.markdown(f"""
                 <div class="{box_class}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                        <span style="font-size: 1.2rem; font-weight: 600; color: {'#64748b' if is_done else '#ffffff'}; text-decoration: {'line-through' if is_done else 'none'}; word-break: break-word;">
-                            {t['title']}
-                        </span>
-                        <div style="display: flex; gap: 10px; flex-shrink: 0;">
-                            <span class="custom-badge" style="border-color: {prio_color}; color: {prio_color};">🚨 {prio}</span>
-                            <span class="custom-badge" style="border-color: rgba(50, 121, 255, 0.4); color: #60a5fa;">🏷️ {t['category']}</span>
-                            <span class="custom-badge" style="border-color: rgba(123, 62, 255, 0.4); color: #c084fc;">📅 {t['day_of_week']}</span>
-                        </div>
+                    <div class="task-title" style="color: {'#64748b' if is_done else '#ffffff'}; text-decoration: {'line-through' if is_done else 'none'};">
+                        {t['title']}
+                    </div>
+                    <div class="task-badges">
+                        <span class="custom-badge" style="border-color: {prio_color}; color: {prio_color};">🚨 {prio}</span>
+                        <span class="custom-badge" style="border-color: rgba(50, 121, 255, 0.4); color: #60a5fa;">🏷️ {t['category']}</span>
+                        <span class="custom-badge" style="border-color: rgba(123, 62, 255, 0.4); color: #c084fc;">📅 {t['day_of_week']}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                c1, c2, c3, _ = st.columns([1, 1, 2, 5])
-                with c1:
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
                     if t["status"] == "В процессе":
-                        if st.button("✅ Закрыть", key=f"done_{t['id']}"):
-                            update_task_status(t['id'], "Выполнено"); st.rerun()
-                    else: st.markdown('<p style="color: #4ade80; font-weight: 700; margin-top: 5px;">✓ Выполнено</p>', unsafe_allow_html=True)
-                with c2:
-                    if st.button("🗑️ Удалить", key=f"del_{t['id']}"): delete_task(t['id']); st.rerun()
-                with c3:
+                        if st.button("✅ Закрыть", key=f"done_{t['id']}", use_container_width=True):
+                            update_task_status(t['id'], "Выполнено")
+                            st.rerun()
+                    else:
+                        st.markdown('<p style="color: #4ade80; font-weight: 700; text-align: center; margin-top: 8px;">✓ Выполнено</p>', unsafe_allow_html=True)
+                
+                with col2:
+                    if st.button("🗑️ Удалить", key=f"del_{t['id']}", use_container_width=True):
+                        delete_task(t['id'])
+                        st.rerun()
+                
+                with col3:
                     if t.get("notes"):
-                        with st.expander("📖 Спецификация"): st.markdown(t["notes"])
+                        if st.button("📖 Спец.", key=f"exp_{t['id']}", use_container_width=True):
+                            st.info(t["notes"])
+                
                 st.write("")
 
 # РАЗДЕЛ 2: БАЗА МЫСЛЕЙ
 elif section == "🧠 База Мыслей":
-    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">🧠 Mentльное Хранилище (Интеллектуальный блокнот)</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">🧠 Ментальное Хранилище</p>', unsafe_allow_html=True)
+    
     with st.form("note_form", clear_on_submit=True):
-        n_col1, n_col2 = st.columns([3, 1])
-        with n_col1: note_title = st.text_input("Заголовок мысли / идеи", placeholder="Например: Архитектурные паттерны или План спринта")
-        with n_col2: note_tag = st.selectbox("Тег группы", ["Идеи", "Инсайты", "Учёба", "Проекты", "Разное"])
-        note_content = st.text_area("Ваш текст (поддерживает Markdown)", height=150)
-        note_submitted = st.form_submit_button("Зафиксировать мысль")
+        note_title = st.text_input("Заголовок мысли / идеи", placeholder="Например: Архитектурные паттерны")
+        note_tag = st.selectbox("Тег группы", ["Идеи", "Инсайты", "Учёба", "Проекты", "Разное"])
+        note_content = st.text_area("Ваш текст (поддерживает Markdown)", height=120)
+        note_submitted = st.form_submit_button("Зафиксировать мысль", use_container_width=True)
         
     if note_submitted and note_content.strip():
         add_note(note_title.strip() if note_title.strip() else "Без заголовка", note_content.strip(), note_tag)
@@ -394,24 +781,28 @@ elif section == "🧠 База Мыслей":
             with st.container():
                 st.markdown(f"""
                 <div class="note-box">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-size: 1.2rem; font-weight: 700; color: #a5b4fc;">{note['title']}</span>
-                        <div style="display: flex; gap: 8px;">
-                            <span class="custom-badge" style="border-color: rgba(165, 180, 252, 0.4); color: #e2e8f0; font-size: 0.7rem;">🕒 {note['created_at']}</span>
-                            <span class="custom-badge" style="border-color: #7B3EFF; color: #c084fc; font-size: 0.7rem;">📌 {note['tag']}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <span style="font-size: 1.1rem; font-weight: 700; color: #a5b4fc; word-break: break-word;">{note['title']}</span>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <span class="custom-badge" style="border-color: rgba(165, 180, 252, 0.4); color: #e2e8f0;">🕒 {note['created_at']}</span>
+                            <span class="custom-badge" style="border-color: #7B3EFF; color: #c084fc;">📌 {note['tag']}</span>
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown(note['content'])
-                col_del, _ = st.columns([1, 10])
-                with col_del:
-                    if st.button("🗑️ Стереть", key=f"del_note_{note['id']}"): delete_note(note['id']); st.rerun()
+                
+                if st.button("🗑️ Стереть заметку", key=f"del_note_{note['id']}", use_container_width=True):
+                    delete_note(note['id'])
+                    st.rerun()
+                
                 st.write("")
+    else:
+        st.info("💡 Записей еще нет. Создайте первую выше!")
 
-# РАЗДЕЛ 3: ФИНАНСОВЫЙ ХАБ (РЕАКТИВНЫЙ UI)
+# РАЗДЕЛ 3: ФИНАНСОВЫЙ ХАБ
 elif section == "💰 Финансовый Хаб":
-    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff; margin-bottom: 5px;">💰 Финансовый Учет и Управление Капиталом</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff; margin-bottom: 5px;">💰 Финансовый Учет и Управление</p>', unsafe_allow_html=True)
     
     tx_list = get_all_transactions()
     
@@ -422,21 +813,21 @@ elif section == "💰 Финансовый Хаб":
     st.markdown("""
     <div class="kpi-container">
         <div class="kpi-card">
-            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Чистый Баланс</div>
-            <div class="kpi-val" style="background: linear-gradient(135deg, #10b981 0%, #a5b4fc 100%); -webkit-background-clip: text;">{:,.2f} ₸</div>
+            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Баланс</div>
+            <div class="kpi-val" style="background: linear-gradient(135deg, #10b981 0%, #a5b4fc 100%); -webkit-background-clip: text;">{:,.0f}₸</div>
         </div>
         <div class="kpi-card">
-            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Всего Поступлений</div>
-            <div class="kpi-val" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); -webkit-background-clip: text;">{:,.2f} ₸</div>
+            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Поступл.</div>
+            <div class="kpi-val" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); -webkit-background-clip: text;">{:,.0f}₸</div>
         </div>
         <div class="kpi-card">
-            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Общие Траты</div>
-            <div class="kpi-val" style="background: linear-gradient(135deg, #f43f5e 0%, #f43f5e 100%); -webkit-background-clip: text;">{:,.2f} ₸</div>
+            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Траты</div>
+            <div class="kpi-val" style="background: linear-gradient(135deg, #f43f5e 0%, #f43f5e 100%); -webkit-background-clip: text;">{:,.0f}₸</div>
         </div>
     </div>
     """.format(net_balance, total_inc, total_exp), unsafe_allow_html=True)
     
-    # Реактивный селектор вынесен из формы для мгновенного обновления категорий
+    # Реактивный селектор для динамического обновления категорий
     f_type = st.radio("Тип операции", ["Доход", "Расход"], horizontal=True, key="reactive_fin_type")
     
     if f_type == "Доход":
@@ -445,18 +836,14 @@ elif section == "💰 Финансовый Хаб":
         categories_list = ["Серверы/IT-Инструменты 🌐", "Еда/Продукты 🍕", "Спорт/Здоровье 🏋️", "Обучение 📚", "Развлечения/Отдых 🎮", "Долги/Кредиты 💸", "Другое 🎰"]
         
     with st.form("finance_form", clear_on_submit=True):
-        f_c1, f_c2 = st.columns([1, 2])
-        with f_c1:
-            f_amount = st.number_input("Сумма (₸)", min_value=0.0, step=500.0)
-        with f_c2:
-            f_cat = st.selectbox("Выбор категории", categories_list)
-                
-        f_desc = st.text_input("Комментарий / Контекст транзакции", placeholder="Например: Погашение займа, покупка серверов...")
-        f_submit = st.form_submit_button("Провести по балансу")
+        f_amount = st.number_input("Сумма (₸)", min_value=0.0, step=500.0)
+        f_cat = st.selectbox("Выбор категории", categories_list)
+        f_desc = st.text_input("Комментарий", placeholder="Например: Покупка серверов...")
+        f_submit = st.form_submit_button("Провести транзакцию", use_container_width=True)
         
     if f_submit and f_amount > 0:
         add_transaction(f_type, f_amount, f_cat, f_desc.strip())
-        st.toast("💰 Транзакция успешно проведена по Ledger-базе!", icon="📊")
+        st.toast("💰 Транзакция успешно проведена!", icon="📊")
         st.rerun()
         
     st.write("")
@@ -465,43 +852,43 @@ elif section == "💰 Финансовый Хаб":
     if tx_list:
         for tx in tx_list:
             sign = "+" if tx["type"] == "Доход" else "-"
-            amt_style = "color: #4ade80; font-weight:700;" if tx["type"] == "Доход" else "color: #f43f5e; font-weight:700;"
+            amt_style = "color: #4ade80;" if tx["type"] == "Доход" else "color: #f43f5e;"
             
             with st.container():
                 st.markdown(f"""
                 <div class="finance-row">
-                    <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="finance-left">
                         <span style="font-size: 0.85rem; color: #64748b;">{tx['date']}</span>
                         <span class="custom-badge" style="border-color: rgba(255,255,255,0.1);">{tx['category']}</span>
-                        <span style="color: #e2e8f0; font-size: 1rem;">{tx['description'] if tx['description'] else 'Без описания'}</span>
+                        <span style="color: #e2e8f0; font-size: 0.95rem; word-break: break-word;">{tx['description'] if tx['description'] else 'Без описания'}</span>
                     </div>
-                    <span style="{amt_style} font-size: 1.15rem;">{sign} {tx['amount']:,.2f} ₸</span>
+                    <div class="finance-amount" style="{amt_style} font-size: 1.1rem;">{sign}{tx['amount']:,.0f}₸</div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                col_f_del, _ = st.columns([1, 15])
-                with col_f_del:
-                    if st.button("🗑️", key=f"del_tx_{tx['id']}", help="Удалить транзакцию"):
-                        delete_transaction(tx['id'])
-                        st.rerun()
+                if st.button("🗑️ Удалить", key=f"del_tx_{tx['id']}", use_container_width=True):
+                    delete_transaction(tx['id'])
+                    st.rerun()
+                
+                st.write("")
     else:
-        st.info("История транзакций пуста. Заведите первую операцию выше.")
+        st.info("📊 История транзакций пуста. Заведите первую операцию выше.")
 
 # РАЗДЕЛ 4: МЕТРИКИ
 elif section == "📊 Метрики Продуктивности":
-    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff; margin-bottom: 20px;">📊 Аналитический Дашборд Системы</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff; margin-bottom: 20px;">📊 Аналитический Дашборд</p>', unsafe_allow_html=True)
     
     analytics_data = get_all_tasks_for_analytics()
     if analytics_data:
         df = pd.DataFrame(analytics_data)
-        graph_col1, graph_col2 = st.columns(2)
-        with graph_col1:
-            st.write("**Объем задач по смарт-категориям**")
-            st.bar_chart(df["Категория"].value_counts(), color="#3279FF")
-        with graph_col2:
-            st.write("**Балансировка нагрузки по дням**")
-            day_counts = df["День недели"].value_counts().reindex(DAYS_ORDER).fillna(0)
-            st.bar_chart(day_counts, color="#7B3EFF")
+        st.markdown("**Объем задач по категориям**")
+        st.bar_chart(df["Категория"].value_counts(), color="#3279FF")
+        
+        st.markdown("**Балансировка нагрузки по дням**")
+        day_counts = df["День недели"].value_counts().reindex(DAYS_ORDER).fillna(0)
+        st.bar_chart(day_counts, color="#7B3EFF")
+    else:
+        st.info("📈 Данные по задачам отсутствуют")
             
     tx_data = get_all_transactions()
     if tx_data:
@@ -509,16 +896,14 @@ elif section == "📊 Метрики Продуктивности":
         st.markdown('<p style="font-size: 1.2rem; font-weight: 600; color: #fff;">💰 Структура Капитала</p>', unsafe_allow_html=True)
         df_tx = pd.DataFrame(tx_data)
         
-        f_col1, f_col2 = st.columns(2)
-        with f_col1:
-            df_inc = df_tx[df_tx["type"] == "Доход"]
-            if not df_inc.empty:
-                st.write("**Источники доходов (₸)**")
-                st.bar_chart(df_inc.groupby("category")["amount"].sum(), color="#10b981")
-            else: st.info("Нет данных по доходам")
-        with f_col2:
-            df_exp = df_tx[df_tx["type"] == "Расход"]
-            if not df_exp.empty:
-                st.write("**Категории расходов (₸)**")
-                st.bar_chart(df_exp.groupby("category")["amount"].sum(), color="#f43f5e")
-            else: st.info("Нет данных по расходам")
+        df_inc = df_tx[df_tx["type"] == "Доход"]
+        if not df_inc.empty:
+            st.markdown("**Источники доходов (₸)**")
+            st.bar_chart(df_inc.groupby("category")["amount"].sum(), color="#10b981")
+        
+        df_exp = df_tx[df_tx["type"] == "Расход"]
+        if not df_exp.empty:
+            st.markdown("**Категории расходов (₸)**")
+            st.bar_chart(df_exp.groupby("category")["amount"].sum(), color="#f43f5e")
+    else:
+        st.info("💰 Данные по финансам отсутствуют")
