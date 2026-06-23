@@ -74,7 +74,7 @@ def init_db():
     except sqlite3.Error as e:
         logging.error(f"Ошибка при инициализации таблиц: {e}")
 
-# --- ОПЕРАЦИИ С ЗАДАЧАМИ ---
+# --- ОПЕРАЦИИ С ЗАЗАЧАМИ ---
 def get_all_tasks_raw():
     try:
         with get_connection() as conn:
@@ -309,14 +309,6 @@ st.markdown("""
             max-height: none !important;
             overflow: visible !important;
         }
-
-        [data-testid="stSidebar"]::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0;
-        }
     }
 
     @media (max-width: 480px) {
@@ -324,14 +316,8 @@ st.markdown("""
             top: 0.5rem;
             left: 0.5rem;
         }
-
         [data-testid="stSidebar"] {
             max-height: 100dvh;
-        }
-
-        [data-testid="stSidebar"] > div {
-            max-height: none !important;
-            overflow: visible !important;
         }
     }
     
@@ -347,7 +333,7 @@ st.markdown("""
         margin-bottom: 35px;
     }
     
-    /* === ФОРМЫ === */
+    /* === ФОРМЫ (ИСПРАВЛЕНА ОШИБКА СМЕЩЕНИЯ ТЕКСТА) === */
     div[data-testid="stForm"] {
         background: rgba(15, 22, 42, 0.4) !important; 
         backdrop-filter: blur(20px) !important;
@@ -356,21 +342,21 @@ st.markdown("""
         padding: 30px !important;
     }
     
+    /* Точечное изменение без ломания внутренних Flexbox-свойств Streamlit */
     div[data-testid="stTextInput"] input, 
     div[data-testid="stTextArea"] textarea, 
-    div[data-baseweb="select"] div {
+    div[data-baseweb="select"] > div {
         background-color: rgba(7, 10, 19, 0.7) !important; 
         color: #ffffff !important;
         font-size: 1rem !important;
-        min-height: 44px !important;
-        padding: 12px 14px !important;
+        border-radius: 10px !important;
     }
     
     .stTextInput, .stTextArea, .stSelectbox {
         margin-bottom: 16px !important;
     }
     
-    /* === КНОПКИ (мобильный размер минимум 44px) === */
+    /* === КНОПКИ === */
     .stButton button {
         background: rgba(255, 255, 255, 0.07) !important; 
         color: #ffffff !important;
@@ -438,7 +424,6 @@ st.markdown("""
         font-size: 1.1rem;
         font-weight: 600;
         word-break: break-word;
-        word-wrap: break-word;
     }
     
     .task-badges {
@@ -460,7 +445,7 @@ st.markdown("""
     .finance-row {
         display: flex; 
         justify-content: space-between; 
-        align-items: flex-start;
+        align-items: center;
         flex-wrap: wrap;
         gap: 12px;
         background: rgba(15, 22, 42, 0.3); 
@@ -480,9 +465,10 @@ st.markdown("""
     }
     
     .finance-amount {
-        min-width: 100px;
+        min-width: 120px;
         text-align: right;
         font-weight: 700;
+        font-size: 1.1rem;
     }
     
     /* === БЕЙДЖИ === */
@@ -518,198 +504,13 @@ st.markdown("""
         background: linear-gradient(to right, #3279FF, #7B3EFF) !important; 
     }
     
-    /* ========== МОБИЛЬНАЯ ОПТИМИЗАЦИЯ (max-width: 768px) ========== */
+    /* ========== МОБИЛЬНАЯ ОПТИМИЗАЦИЯ ========== */
     @media (max-width: 768px) {
-        .saas-title {
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-        }
-        
-        .saas-subtitle {
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
-        
-        div[data-testid="stForm"] {
-            padding: 20px !important;
-            border-radius: 16px !important;
-        }
-        
-        .kpi-container {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        
-        .kpi-card {
-            padding: 14px 16px;
-        }
-        
-        .kpi-val {
-            font-size: 1.5rem;
-        }
-        
-        .task-box {
-            padding: 12px 16px;
-            border-radius: 14px;
-        }
-        
-        .task-title {
-            font-size: 1rem;
-        }
-        
-        .task-badges {
-            gap: 6px;
-        }
-        
-        .custom-badge {
-            font-size: 0.7rem;
-            padding: 5px 10px;
-        }
-        
-        .note-box {
-            padding: 12px;
-            border-radius: 12px;
-        }
-        
-        .finance-row {
-            padding: 12px;
-            border-radius: 10px;
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .finance-left {
-            width: 100%;
-        }
-        
-        .finance-amount {
-            width: 100%;
-            text-align: left;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .pomo-time {
-            font-size: 1.8rem;
-        }
-    }
-    
-    /* ========== НЕБОЛЬШИЕ ЭКРАНЫ (max-width: 480px) ========== */
-    @media (max-width: 480px) {
-        html, body, [data-testid="stAppViewContainer"], .stApp {
-            padding: 0 !important;
-        }
-        
-        .saas-title {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-        
-        .saas-subtitle {
-            font-size: 0.85rem;
-            margin-bottom: 15px;
-        }
-        
-        div[data-testid="stForm"] {
-            padding: 16px !important;
-            border-radius: 12px !important;
-            margin-left: -16px !important;
-            margin-right: -16px !important;
-            border-radius: 0 !important;
-        }
-        
-        .kpi-container {
-            grid-template-columns: 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .kpi-card {
-            padding: 12px 14px;
-        }
-        
-        .kpi-val {
-            font-size: 1.3rem;
-        }
-        
-        .task-box {
-            padding: 12px 14px;
-            gap: 10px;
-            border-radius: 12px;
-        }
-        
-        .task-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-        
-        .task-badges {
-            gap: 5px;
-        }
-        
-        .custom-badge {
-            font-size: 0.65rem;
-            padding: 4px 8px;
-        }
-        
-        .note-box {
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-        }
-        
-        .finance-row {
-            padding: 12px;
-            gap: 8px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-        }
-        
-        .finance-left {
-            width: 100%;
-            gap: 8px;
-        }
-        
-        .finance-amount {
-            font-size: 1rem;
-        }
-        
-        .pomo-time {
-            font-size: 1.5rem;
-        }
-        
-        .pomo-container {
-            padding: 12px;
-            margin-top: 15px;
-        }
-        
-        [data-testid="stButton"] {
-            width: 100%;
-        }
-        
-        .stButton button {
-            width: 100% !important;
-            min-height: 48px !important;
-        }
-    }
-    
-    /* === УЛУЧШЕНИЯ ДЛЯ ВСЕХ ЭКРАНОВ === */
-    .stRadio {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 16px;
-    }
-    
-    .stSlider {
-        margin-bottom: 16px;
-    }
-    
-    /* Обеспечиваем читаемость на всех размерах */
-    p, div, span {
-        -webkit-user-select: auto !important;
-        user-select: auto !important;
+        .saas-title { font-size: 1.8rem; }
+        .saas-subtitle { font-size: 0.9rem; }
+        .kpi-container { grid-template-columns: repeat(2, 1fr); }
+        .finance-row { flex-direction: column; align-items: flex-start; }
+        .finance-amount { text-align: left; min-width: auto; margin-top: 5px; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -809,7 +610,7 @@ if section == "📝 Мой Планшет":
     st.write("")
 
     with st.form("task_form", clear_on_submit=True):
-        task_text = st.text_input("Название фокуса", placeholder="Например: Отредактировать конфигурационные скрипты")
+        task_text = st.text_input("Название фокуса", placeholder="Например: Oтредактировать конфиг")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -817,7 +618,7 @@ if section == "📝 Мой Планшет":
         with col2:
             priority = st.selectbox("Приоритет", ["Высокий 🔥", "Средний ⚡", "Низкий 🎯"])
         
-        day_of_week = st.selectbox("Период времени", ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"])
+        day_of_week = st.selectbox("Период времени", DAYS_ORDER)
         task_notes = st.text_area("Контекст и спецификации", height=100)
         submitted = st.form_submit_button("Интегрировать в систему", use_container_width=True)
             
@@ -874,7 +675,7 @@ elif section == "🧠 База Мыслей":
     with st.form("note_form", clear_on_submit=True):
         note_title = st.text_input("Заголовок мысли / идеи", placeholder="Например: Архитектурные паттерны")
         note_tag = st.selectbox("Тег группы", ["Идеи", "Инсайты", "Учёба", "Проекты", "Разное"])
-        note_content = st.text_area("Ваш текст (поддерживает Markdown)", height=120)
+        note_content = st.text_area("Ваш text (поддерживает Markdown)", height=120)
         note_submitted = st.form_submit_button("Зафиксировать мысль", use_container_width=True)
         
     if note_submitted and note_content.strip():
@@ -908,108 +709,91 @@ elif section == "🧠 База Мыслей":
 
 # РАЗДЕЛ 3: ФИНАНСОВЫЙ ХАБ
 elif section == "💰 Финансовый Хаб":
-    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff; margin-bottom: 5px;">💰 Финансовый Учет и Управление</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">💰 Финансовый Учет и Управление</p>', unsafe_allow_html=True)
     
-    tx_list = get_all_transactions()
+    transactions = get_all_transactions()
+    total_income = sum(t['amount'] for t in transactions if t['type'] == 'Доход')
+    total_expense = sum(t['amount'] for t in transactions if t['type'] == 'Расход')
+    current_balance = total_income - total_expense
     
-    total_inc = sum([x["amount"] for x in tx_list if x["type"] == "Доход"])
-    total_exp = sum([x["amount"] for x in tx_list if x["type"] == "Расход"])
-    net_balance = total_inc - total_exp
-    
-    st.markdown("""
+    st.markdown(f"""
     <div class="kpi-container">
         <div class="kpi-card">
             <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Баланс</div>
-            <div class="kpi-val" style="background: linear-gradient(135deg, #10b981 0%, #a5b4fc 100%); -webkit-background-clip: text;">{:,.0f}₸</div>
+            <div class="kpi-val" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); -webkit-background-clip: text;">{current_balance:,.0f} ₸</div>
         </div>
         <div class="kpi-card">
             <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Поступл.</div>
-            <div class="kpi-val" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); -webkit-background-clip: text;">{:,.0f}₸</div>
+            <div class="kpi-val" style="background: linear-gradient(135deg, #3279FF 0%, #60a5fa 100%); -webkit-background-clip: text;">{total_income:,.0f} ₸</div>
         </div>
         <div class="kpi-card">
             <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Траты</div>
-            <div class="kpi-val" style="background: linear-gradient(135deg, #f43f5e 0%, #f43f5e 100%); -webkit-background-clip: text;">{:,.0f}₸</div>
+            <div class="kpi-val" style="background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%); -webkit-background-clip: text;">{total_expense:,.0f} ₸</div>
         </div>
     </div>
-    """.format(net_balance, total_inc, total_exp), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
-    # Реактивный селектор для динамического обновления категорий
-    f_type = st.radio("Тип операции", ["Доход", "Расход"], horizontal=True, key="reactive_fin_type")
-    
-    if f_type == "Доход":
-        categories_list = ["Бизнес/SaaS 🚀", "Зарплата 💼", "Фриланс ⚡", "Инвестиции 📈", "Другое 🎰"]
-    else:
-        categories_list = ["Серверы/IT-Инструменты 🌐", "Еда/Продукты 🍕", "Спорт/Здоровье 🏋️", "Обучение 📚", "Развлечения/Отдых 🎮", "Долги/Кредиты 💸", "Другое 🎰"]
-        
     with st.form("finance_form", clear_on_submit=True):
-        f_amount = st.number_input("Сумма (₸)", min_value=0.0, step=500.0)
-        f_cat = st.selectbox("Выбор категории", categories_list)
-        f_desc = st.text_input("Комментарий", placeholder="Например: Покупка серверов...")
-        f_submit = st.form_submit_button("Провести транзакцию", use_container_width=True)
+        t_type = st.radio("Тип операции", ["Доход", "Расход"], horizontal=True)
+        amount = st.number_input("Сумма (₸)", min_value=0.0, value=0.0, step=1000.0)
+        category = st.selectbox("Выбор категории", ["Бизнес/SaaS 🚀", "Серверы/IT-Инструменты 🌐", "Маркетинг 📊", "Личное 🍕", "Другое 💎"])
+        description = st.text_input("Комментарий", placeholder="Например: Покупка серверов...")
+        fin_submitted = st.form_submit_button("Зарегистрировать операцию", use_container_width=True)
         
-    if f_submit and f_amount > 0:
-        add_transaction(f_type, f_amount, f_cat, f_desc.strip())
-        st.toast("💰 Транзакция успешно проведена!", icon="📊")
+    if fin_submitted and amount > 0:
+        add_transaction(t_type, amount, category, description.strip())
         st.rerun()
         
-    st.write("")
-    st.markdown('<p style="font-size: 1.2rem; font-weight: 600; color: #fff;">📋 История денежных потоков</p>', unsafe_allow_html=True)
-    
-    if tx_list:
-        for tx in tx_list:
-            sign = "+" if tx["type"] == "Доход" else "-"
-            amt_style = "color: #4ade80;" if tx["type"] == "Доход" else "color: #f43f5e;"
+    if transactions:
+        st.markdown('### 📜 История транзакций')
+        for t in transactions:
+            color = "#10b981" if t['type'] == "Доход" else "#f43f5e"
+            prefix = "+" if t['type'] == "Доход" else "-"
             
             with st.container():
                 st.markdown(f"""
                 <div class="finance-row">
                     <div class="finance-left">
-                        <span style="font-size: 0.85rem; color: #64748b;">{tx['date']}</span>
-                        <span class="custom-badge" style="border-color: rgba(255,255,255,0.1);">{tx['category']}</span>
-                        <span style="color: #e2e8f0; font-size: 0.95rem; word-break: break-word;">{tx['description'] if tx['description'] else 'Без описания'}</span>
+                        <span class="custom-badge" style="border-color: {color}; color: {color};">{t['type']}</span>
+                        <span style="font-weight: 600; font-size: 1rem;">{t['category']}</span>
+                        <span style="color: #94a3b8; font-size: 0.85rem;">— {t['description']}</span>
                     </div>
-                    <div class="finance-amount" style="{amt_style} font-size: 1.1rem;">{sign}{tx['amount']:,.0f}₸</div>
+                    <div class="finance-amount" style="color: {color};">
+                        {prefix}{t['amount']:,.0f} ₸
+                        <div style="font-size: 0.7rem; color: #64748b; font-weight: 400;">{t['date']}</div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button("🗑️ Удалить", key=f"del_tx_{tx['id']}", use_container_width=True):
-                    delete_transaction(tx['id'])
+                if st.button("🗑️ Удалить транзакцию", key=f"del_fin_{t['id']}", use_container_width=True):
+                    delete_transaction(t['id'])
                     st.rerun()
-                
                 st.write("")
     else:
-        st.info("📊 История транзакций пуста. Заведите первую операцию выше.")
+        st.info("💰 Транзакции отсутствуют. Внесите данные выше.")
 
-# РАЗДЕЛ 4: МЕТРИКИ
+# РАЗДЕЛ 4: МЕТРИКИ ПРОДУКТИВНОСТИ
 elif section == "📊 Метрики Продуктивности":
-    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff; margin-bottom: 20px;">📊 Аналитический Дашборд</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">📊 Метрики Продуктивности спринта</p>', unsafe_allow_html=True)
     
     analytics_data = get_all_tasks_for_analytics()
     if analytics_data:
         df = pd.DataFrame(analytics_data)
-        st.markdown("**Объем задач по категориям**")
-        st.bar_chart(df["Категория"].value_counts(), color="#3279FF")
         
-        st.markdown("**Балансировка нагрузки по дням**")
-        day_counts = df["День недели"].value_counts().reindex(DAYS_ORDER).fillna(0)
-        st.bar_chart(day_counts, color="#7B3EFF")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🎯 Распределение задач по сферам")
+            if "Категория" in df.columns:
+                cat_chart = df["Категория"].value_counts()
+                st.bar_chart(cat_chart)
+                
+        with col2:
+            st.markdown("#### ⚡ Статусы выполнения")
+            if "Статус" in df.columns:
+                status_chart = df["Статус"].value_counts()
+                st.bar_chart(status_chart)
+                
+        st.markdown("#### 📋 Общая таблица активностей")
+        st.dataframe(df, use_container_width=True)
     else:
-        st.info("📈 Данные по задачам отсутствуют")
-            
-    tx_data = get_all_transactions()
-    if tx_data:
-        st.divider()
-        st.markdown('<p style="font-size: 1.2rem; font-weight: 600; color: #fff;">💰 Структура Капитала</p>', unsafe_allow_html=True)
-        df_tx = pd.DataFrame(tx_data)
-        
-        df_inc = df_tx[df_tx["type"] == "Доход"]
-        if not df_inc.empty:
-            st.markdown("**Источники доходов (₸)**")
-            st.bar_chart(df_inc.groupby("category")["amount"].sum(), color="#10b981")
-        
-        df_exp = df_tx[df_tx["type"] == "Расход"]
-        if not df_exp.empty:
-            st.markdown("**Категории расходов (₸)**")
-            st.bar_chart(df_exp.groupby("category")["amount"].sum(), color="#f43f5e")
-    else:
-        st.info("💰 Данные по финансам отсутствуют")
+        st.info("📊 База данных пуста. Наполните «Мой Планшет» задачами для генерации аналитики.")
