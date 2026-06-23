@@ -215,11 +215,39 @@ st.markdown("""
         font-family: 'Inter', sans-serif !important;
     }
     
-    html, body, [data-testid="stAppViewContainer"], .stApp, 
+    html, body, [data-testid="stAppViewContainer"], .stApp,
     a, button, input, textarea, select, [role="button"],
     .stSelectbox, div[data-baseweb="select"], .stButton button,
     iframe, [data-testid="stSidebar"], .stTextInput input, .stTextArea textarea {
         cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="url(%23grad)" filter="drop-shadow(0px 0px 3px %233279FF)"/><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%233279FF;stop-opacity:1" /><stop offset="100%" style="stop-color:%237B3EFF;stop-opacity:1" /></linearGradient></defs></svg>') 7 7, auto !important;
+    }
+
+    html {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overscroll-behavior-y: auto;
+        touch-action: pan-y;
+    }
+
+    [data-testid="stAppViewContainer"] {
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    .stApp {
+        overflow: visible !important;
+        min-height: 100vh;
+        min-height: 100dvh;
     }
     
     /* === САЙДБАР === */
@@ -227,6 +255,81 @@ st.markdown("""
         background: rgba(11, 15, 25, 0.7) !important;
         backdrop-filter: blur(25px) !important;
         border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    [data-testid="stSidebarContent"] {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    [data-testid="stSidebarNav"] {
+        overflow: visible !important;
+        max-height: none !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] {
+        position: fixed;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 10002;
+        touch-action: manipulation;
+    }
+
+    [data-testid="stSidebar"] [role="button"],
+    [data-testid="stSidebar"] button {
+        touch-action: manipulation;
+    }
+
+    @media (max-width: 768px) {
+        html, body, [data-testid="stAppViewContainer"], .stApp {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+
+        [data-testid="stSidebar"] {
+            max-height: 100dvh;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior-y: contain;
+        }
+
+        [data-testid="stSidebarContent"],
+        [data-testid="stSidebarNav"] {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        [data-testid="stSidebar"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+        }
+    }
+
+    @media (max-width: 480px) {
+        [data-testid="stSidebarCollapsedControl"] {
+            top: 0.5rem;
+            left: 0.5rem;
+        }
+
+        [data-testid="stSidebar"] {
+            max-height: 100dvh;
+        }
+
+        [data-testid="stSidebar"] > div {
+            max-height: none !important;
+            overflow: visible !important;
+        }
     }
     
     /* === ЗАГОЛОВКИ === */
