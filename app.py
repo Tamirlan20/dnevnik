@@ -233,7 +233,7 @@ st.markdown("""
         overflow-y: auto !important;
         min-height: 100vh;
         min-height: 100dvh;
-        overscroll-behavior-y: auto;
+        overscroll-behavior-y: none;
         touch-action: pan-y;
     }
 
@@ -242,12 +242,14 @@ st.markdown("""
         overflow-y: visible !important;
         min-height: 100vh;
         min-height: 100dvh;
+        overscroll-behavior-y: none;
     }
 
     .stApp {
         overflow: visible !important;
         min-height: 100vh;
         min-height: 100dvh;
+        overscroll-behavior-y: none;
     }
     
     /* === САЙДБАР === */
@@ -291,6 +293,7 @@ st.markdown("""
             overflow-y: auto !important;
             max-height: none !important;
             height: auto !important;
+            overscroll-behavior-y: none;
         }
 
         [data-testid="stSidebar"] {
