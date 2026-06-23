@@ -200,86 +200,36 @@ def seed_demo_tour():
             conn.commit()
 
 # --- ИНИЦИАЛИЗАЦИЯ СТИЛЕЙ СТРАНИЦЫ ---
-st.set_page_config(page_title="Пространство Фокуса | SaaS", page_icon="🪐", layout="wide")
+st.set_page_config(page_title="Пространство Фокуса | SaaS", page_icon="🪐", layout="centered")
 init_db()
 seed_demo_tour() 
 
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    html, body, [data-testid="stAppViewContainer"], .stApp {
-        background: radial-gradient(circle at 50% 0%, #1a103c 0%, #0b0f19 60%, #020408 100%) !important;
-        color: #f8fafc !important;
-        font-family: 'Inter', sans-serif !important;
+    /* ... (ваши существующие стили) ... */
+
+    /* Адаптивность для мобильных */
+    @media (max-width: 600px) {
+        .kpi-container { flex-direction: column; }
+        .saas-title { font-size: 1.8rem !important; }
+        .task-box { padding: 15px !important; }
+        .finance-row { flex-direction: column; align-items: flex-start !important; gap: 10px; }
     }
-    html, body, [data-testid="stAppViewContainer"], .stApp, 
-    a, button, input, textarea, select, [role="button"],
-    .stSelectbox, div[data-baseweb="select"], .stButton button,
-    iframe, [data-testid="stSidebar"], .stTextInput input, .stTextArea textarea {
-        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="url(%23grad)" filter="drop-shadow(0px 0px 3px %233279FF)"/><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%233279FF;stop-opacity:1" /><stop offset="100%" style="stop-color:%237B3EFF;stop-opacity:1" /></linearGradient></defs></svg>') 7 7, auto !important;
+
+    /* Исправление "обрезания" контента */
+    [data-testid="stAppViewContainer"] {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
-    [data-testid="stSidebar"] {
-        background: rgba(11, 15, 25, 0.7) !important;
-        backdrop-filter: blur(25px) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
-    }
-    .saas-title {
-        background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: 800; font-size: 2.8rem; letter-spacing: -0.04em; margin-bottom: 5px;
-    }
-    .saas-subtitle { color: #94a3b8; font-size: 1.05rem; margin-bottom: 35px; }
     
-    div[data-testid="stForm"] {
-        background: rgba(15, 22, 42, 0.4) !important; backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 20px !important; padding: 30px !important;
-    }
-    div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea, div[data-baseweb="select"] div {
-        background-color: rgba(7, 10, 19, 0.7) !important; color: #ffffff !important;
-    }
-    .kpi-container { display: flex; gap: 16px; margin-bottom: 25px; }
-    .kpi-card {
-        flex: 1; background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 16px 20px;
-    }
-    .kpi-val {
-        font-size: 1.8rem; font-weight: 700;
-        background: linear-gradient(135deg, #3279FF 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .task-box {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 24px; margin-bottom: 12px; width: 100%;
-    }
-    .task-completed {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
-        border: 1px solid rgba(16, 185, 129, 0.2) !important;
-    }
-    .note-box {
-        background: linear-gradient(135deg, rgba(123, 62, 255, 0.06) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
-        border: 1px solid rgba(123, 62, 255, 0.2) !important; border-radius: 16px; padding: 20px; margin-bottom: 15px;
-    }
-    .finance-row {
-        display: flex; justify-content: space-between; align-items: center;
-        background: rgba(15, 22, 42, 0.3); border: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 14px 20px; border-radius: 12px; margin-bottom: 8px;
-    }
-    .custom-badge {
-        background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
-    }
-    .stButton button {
-        background: rgba(255, 255, 255, 0.07) !important; color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 12px !important;
-    }
-    .stFormSubmitButton button { background: linear-gradient(135deg, #3279FF 0%, #7B3EFF 100%) !important; }
-    .stProgress > div > div > div > div { background: linear-gradient(to right, #3279FF, #7B3EFF) !important; }
+    /* Улучшение форм на мобильных */
+    .stForm { width: 100% !important; }
     
-    .pomo-container {
-        background: rgba(30, 27, 75, 0.4); border: 1px solid rgba(123, 62, 255, 0.2);
-        padding: 15px; border-radius: 15px; text-align: center; margin-top: 25px;
+    /* Скрываем кастомный курсор на мобильных (там нет мыши) */
+    @media (pointer: coarse) {
+        *, *:hover { cursor: auto !important; }
     }
-    .pomo-time { font-size: 2rem; font-weight: 800; color: #ff4b4b; font-family: monospace; }
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
 DAYS_ORDER = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
