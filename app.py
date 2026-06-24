@@ -3,7 +3,8 @@ import pandas as pd
 import sqlite3
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+import json
 
 # --- КОНФИГУРАЦИЯ БАЗЫ ДАННЫХ И ЛОГИРОВАНИЯ ---
 DB_NAME = "focus_space.db"
@@ -32,13 +33,23 @@ def init_db():
                     day_of_week TEXT NOT NULL,
                     notes TEXT,
                     status TEXT NOT NULL DEFAULT 'В процессе',
-                    priority TEXT NOT NULL DEFAULT 'Средний ⚡'
+                    priority TEXT NOT NULL DEFAULT 'Средний ⚡',
+                    time_spent INTEGER DEFAULT 0,
+                    pomodoro_sessions INTEGER DEFAULT 0,
+                    created_date TEXT,
+                    completed_date TEXT
                 )
             """)
             cursor.execute("PRAGMA table_info(tasks)")
             columns = [col['name'] for col in cursor.fetchall()]
-            if 'priority' not in columns:
-                cursor.execute("ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'Средний ⚡'")
+            if 'time_spent' not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN time_spent INTEGER DEFAULT 0")
+            if 'pomodoro_sessions' not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN pomodoro_sessions INTEGER DEFAULT 0")
+            if 'created_date' not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN created_date TEXT")
+            if 'completed_date' not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN completed_date TEXT")
                 
             # 2. Таблица заметок
             cursor.execute("""
@@ -70,43 +81,88 @@ def init_db():
                     value TEXT NOT NULL
                 )
             """)
+            
+            # 5. ✨ НОВОЕ: Таблица привычек
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS habits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    frequency TEXT NOT NULL,
+                    created_date TEXT NOT NULL,
+                    color TEXT DEFAULT 'blue'
+                )
+            """)
+            
+            # 6. ✨ НОВОЕ: Таблица дневников привычек
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS habit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    habit_id INTEGER NOT NULL,
+                    date TEXT NOT NULL,
+                    completed BOOLEAN DEFAULT 0,
+                    notes TEXT,
+                    FOREIGN KEY (habit_id) REFERENCES habits(id)
+                )
+            """)
+            
+            # 7. ✨ НОВОЕ: Таблица целей
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS goals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    category TEXT NOT NULL,
+                    target_date TEXT NOT NULL,
+                    progress INTEGER DEFAULT 0,
+                    status TEXT DEFAULT 'Активна',
+                    created_date TEXT NOT NULL
+                )
+            """)
+            
+            # 8. ✨ НОВОЕ: Таблица сессий Pomodoro
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER,
+                    duration_minutes INTEGER NOT NULL,
+                    completed BOOLEAN DEFAULT 1,
+                    date TEXT NOT NULL,
+                    notes TEXT
+                )
+            """)
+            
             conn.commit()
     except sqlite3.Error as e:
         logging.error(f"Ошибка при инициализации таблиц: {e}")
 
-# --- ОПЕРАЦИИ С ЗАЗАЧАМИ ---
+# --- ОПЕРАЦИИ С ЗАДАЧАМИ (УЛУЧШЕНЫ) ---
 def get_all_tasks_raw():
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, title, category, day_of_week, notes, status, priority FROM tasks")
-            return [dict(row) for row in cursor.fetchall()]
-    except sqlite3.Error as e:
-        return []
-
-def get_all_tasks_for_analytics():
-    try:
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT category AS [Категория], day_of_week AS [День недели], status AS [Статус], priority AS [Приоритет] FROM tasks")
+            cursor.execute("SELECT id, title, category, day_of_week, notes, status, priority, time_spent, pomodoro_sessions, created_date FROM tasks ORDER BY priority DESC")
             return [dict(row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         return []
 
 def add_task(title, category, day_of_week, notes, priority):
     try:
+        current_date = datetime.now().strftime("%Y-%m-%d")
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO tasks (title, category, day_of_week, notes, status, priority) VALUES (?, ?, ?, ?, 'В процессе', ?)", (title, category, day_of_week, notes, priority))
+            cursor.execute("INSERT INTO tasks (title, category, day_of_week, notes, status, priority, created_date) VALUES (?, ?, ?, ?, 'В процессе', ?, ?)", 
+                         (title, category, day_of_week, notes, priority, current_date))
             conn.commit()
     except sqlite3.Error as e:
         logging.error(f"Ошибка добавления задачи: {e}")
 
 def update_task_status(task_id, new_status):
     try:
+        completed_date = datetime.now().strftime("%Y-%m-%d") if new_status == "Выполнено" else None
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (new_status, task_id))
+            cursor.execute("UPDATE tasks SET status = ?, completed_date = ? WHERE id = ?", (new_status, completed_date, task_id))
             conn.commit()
     except sqlite3.Error as e:
         logging.error(f"Ошибка обновления статуса: {e}")
@@ -119,6 +175,125 @@ def delete_task(task_id):
             conn.commit()
     except sqlite3.Error as e:
         logging.error(f"Ошибка удаления задачи: {e}")
+
+def update_pomodoro_count(task_id):
+    """✨ Увеличить счетчик Pomodoro для задачи"""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE tasks SET pomodoro_sessions = pomodoro_sessions + 1 WHERE id = ?", (task_id,))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка обновления Pomodoro: {e}")
+
+# --- ОПЕРАЦИИ С ПРИВЫЧКАМИ (✨ НОВОЕ) ---
+def add_habit(name, category, frequency):
+    try:
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO habits (name, category, frequency, created_date) VALUES (?, ?, ?, ?)", 
+                         (name, category, frequency, current_date))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка добавления привычки: {e}")
+
+def get_all_habits():
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name, category, frequency, created_date FROM habits")
+            return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        return []
+
+def log_habit(habit_id, date, completed):
+    """Логировать выполнение привычки"""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO habit_logs (habit_id, date, completed) VALUES (?, ?, ?)", 
+                         (habit_id, date, completed))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка логирования привычки: {e}")
+
+def get_habit_streak(habit_id):
+    """Вычислить количество дней подряд выполнения привычки"""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT date FROM habit_logs WHERE habit_id = ? AND completed = 1 
+                ORDER BY date DESC LIMIT 30
+            """, (habit_id,))
+            dates = [datetime.strptime(row['date'], "%Y-%m-%d").date() for row in cursor.fetchall()]
+            
+            if not dates:
+                return 0
+            
+            streak = 1
+            current_date = datetime.now().date()
+            for i, date in enumerate(dates):
+                if i == 0 and date != current_date and date != current_date - timedelta(days=1):
+                    streak = 0
+                    break
+                if i > 0 and dates[i-1] - date != timedelta(days=1):
+                    break
+                streak += 1
+            return streak
+    except Exception as e:
+        return 0
+
+def delete_habit(habit_id):
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM habit_logs WHERE habit_id = ?", (habit_id,))
+            cursor.execute("DELETE FROM habits WHERE id = ?", (habit_id,))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка удаления привычки: {e}")
+
+# --- ОПЕРАЦИИ С ЦЕЛЯМИ (✨ НОВОЕ) ---
+def add_goal(title, description, category, target_date):
+    try:
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO goals (title, description, category, target_date, created_date) VALUES (?, ?, ?, ?, ?)", 
+                         (title, description, category, target_date, current_date))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка добавления цели: {e}")
+
+def get_all_goals():
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, title, description, category, target_date, progress, status, created_date FROM goals ORDER BY target_date ASC")
+            return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        return []
+
+def update_goal_progress(goal_id, progress):
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            status = "Завершена" if progress >= 100 else "Активна"
+            cursor.execute("UPDATE goals SET progress = ?, status = ? WHERE id = ?", (progress, status, goal_id))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка обновления прогресса: {e}")
+
+def delete_goal(goal_id):
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM goals WHERE id = ?", (goal_id,))
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка удаления цели: {e}")
 
 # --- ОПЕРАЦИИ С ЗАМЕТКАМИ ---
 def get_all_notes():
@@ -178,6 +353,68 @@ def delete_transaction(t_id):
     except sqlite3.Error as e:
         logging.error(f"Ошибка удаления транзакции: {e}")
 
+# --- ЭКСПОРТ ДАННЫХ (✨ НОВОЕ) ---
+def export_tasks_to_csv():
+    """Экспортировать все задачи в CSV"""
+    try:
+        tasks = get_all_tasks_raw()
+        df = pd.DataFrame(tasks)
+        csv = df.to_csv(index=False, encoding='utf-8-sig')
+        return csv
+    except Exception as e:
+        logging.error(f"Ошибка экспорта: {e}")
+        return None
+
+def export_all_data_json():
+    """Экспортировать все данные в JSON"""
+    try:
+        data = {
+            'tasks': get_all_tasks_raw(),
+            'notes': get_all_notes(),
+            'transactions': get_all_transactions(),
+            'habits': get_all_habits(),
+            'goals': get_all_goals(),
+            'exported_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        return json.dumps(data, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logging.error(f"Ошибка экспорта JSON: {e}")
+        return None
+
+# --- ЕЖЕНЕДЕЛЬНЫЙ ОТЧЕТ (✨ НОВОЕ) ---
+def generate_weekly_report():
+    """Генерировать еженедельный отчет"""
+    try:
+        tasks = get_all_tasks_raw()
+        notes = get_all_notes()
+        transactions = get_all_transactions()
+        habits = get_all_habits()
+        
+        today = datetime.now()
+        week_ago = today - timedelta(days=7)
+        
+        # Фильтр задач за неделю
+        weekly_tasks = [t for t in tasks if t.get('created_date', '') >= week_ago.strftime("%Y-%m-%d")]
+        completed_tasks = [t for t in weekly_tasks if t['status'] == 'Выполнено']
+        
+        # Фильтр транзакций за неделю
+        weekly_income = sum(t['amount'] for t in transactions if t['type'] == 'Доход')
+        weekly_expense = sum(t['amount'] for t in transactions if t['type'] == 'Расход')
+        
+        return {
+            'total_tasks': len(weekly_tasks),
+            'completed_tasks': len(completed_tasks),
+            'completion_rate': len(completed_tasks) / len(weekly_tasks) * 100 if weekly_tasks else 0,
+            'weekly_income': weekly_income,
+            'weekly_expense': weekly_expense,
+            'net_balance': weekly_income - weekly_expense,
+            'total_notes': len(notes),
+            'total_habits': len(habits)
+        }
+    except Exception as e:
+        logging.error(f"Ошибка генерации отчета: {e}")
+        return None
+
 # --- ОНБОРДИНГ ---
 def is_onboarding_completed():
     try:
@@ -195,6 +432,9 @@ def seed_demo_tour():
         add_note("💡 Первая ментальная искра", "Это пространство заметок. Храните тут свои инсайты и идеи для проектов.", "Идеи")
         add_transaction("Доход", 150000, "Бизнес/SaaS 🚀", "Первая подписка на систему")
         add_transaction("Расход", 12000, "Серверы/IT-Инструменты 🌐", "Оплата облачного хостинга")
+        add_habit("📚 Чтение 30 минут", "Обучение", "Ежедневно")
+        add_habit("💪 Спорт/Зарядка", "Здоровье", "5 раз в неделю")
+        add_goal("Запустить MVP продукта", "Разработать и выпустить MVP", "Бизнес", "2024-12-31")
         with get_connection() as conn:
             conn.cursor().execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('onboarding_completed', 'True')")
             conn.commit()
@@ -333,7 +573,7 @@ st.markdown("""
         margin-bottom: 35px;
     }
     
-    /* === ФОРМЫ (ИСПРАВЛЕНА ОШИБКА СМЕЩЕНИЯ ТЕКСТА) === */
+    /* === ФОРМЫ === */
     div[data-testid="stForm"] {
         background: rgba(15, 22, 42, 0.4) !important; 
         backdrop-filter: blur(20px) !important;
@@ -342,7 +582,6 @@ st.markdown("""
         padding: 30px !important;
     }
     
-    /* Точечное изменение без ломания внутренних Flexbox-свойств Streamlit */
     div[data-testid="stTextInput"] input, 
     div[data-testid="stTextArea"] textarea, 
     div[data-baseweb="select"] > div {
@@ -432,10 +671,19 @@ st.markdown("""
         gap: 8px;
     }
     
-    /* === КАРТОЧКИ ЗАМЕТОК === */
-    .note-box {
-        background: linear-gradient(135deg, rgba(123, 62, 255, 0.06) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
-        border: 1px solid rgba(123, 62, 255, 0.2) !important; 
+    /* === КАРТОЧКИ ПРИВЫЧЕК === */
+    .habit-card {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.06) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
+        border: 1px solid rgba(34, 197, 94, 0.2) !important; 
+        border-radius: 16px; 
+        padding: 16px; 
+        margin-bottom: 15px;
+    }
+    
+    /* === КАРТОЧКИ ЦЕЛЕЙ === */
+    .goal-card {
+        background: linear-gradient(135deg, rgba(249, 115, 22, 0.06) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
+        border: 1px solid rgba(249, 115, 22, 0.2) !important; 
         border-radius: 16px; 
         padding: 16px; 
         margin-bottom: 15px;
@@ -529,7 +777,15 @@ st.markdown('<p class="saas-subtitle">Интеллектуальный SaaS-ха
 
 # --- САЙДБАР: НАВИГАЦИЯ И ПОМОДОРО ---
 with st.sidebar:
-    section = st.radio("Навигация", ["📝 Мой Планшет", "🧠 База Мыслей", "💰 Финансовый Хаб", "📊 Метрики Продуктивности"])
+    section = st.radio("Навигация", [
+        "📝 Мой Планшет", 
+        "🧠 База Мыслей", 
+        "💰 Финансовый Хаб", 
+        "📊 Метрики Продуктивности",
+        "✅ Мои Привычки",      # ✨ НОВОЕ
+        "🎯 Мои Цели",          # ✨ НОВОЕ
+        "📈 Еженедельный Отчет" # ✨ НОВОЕ
+    ])
     
     st.markdown("---")
     st.markdown("### ⏱️ Станция Фокуса (Pomodoro)")
@@ -581,7 +837,7 @@ with st.sidebar:
         </div>
         """.format(mins, secs), unsafe_allow_html=True)
 
-# РАЗДЕЛ 1: ПЛАНИРОВЩИК ЗАДАЧ
+# ========== ✨ РАЗДЕЛ 1: ПЛАНИРОВЩИК ЗАДАЧ (УЛУЧШЕН) ==========
 if section == "📝 Мой Планшет":
     total_tasks = len(all_tasks)
     done_tasks = len([t for t in all_tasks if t["status"] == "Выполнено"])
@@ -591,7 +847,7 @@ if section == "📝 Мой Планшет":
     st.markdown("""
     <div class="kpi-container">
         <div class="kpi-card">
-            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Эффективность Спринта</div>
+            <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Эффективность</div>
             <div class="kpi-val">{}%</div>
         </div>
         <div class="kpi-card">
@@ -608,6 +864,13 @@ if section == "📝 Мой Планшет":
     st.markdown('<p style="font-size: 0.9rem; font-weight: 600; color: #a5b4fc; margin-bottom: 5px;">🔥 Прогресс закрытия текущего спринта:</p>', unsafe_allow_html=True)
     st.progress(progress_ratio)
     st.write("")
+    
+    # ✨ НОВОЕ: Поиск и фильтры
+    col_search, col_filter = st.columns([2, 1])
+    with col_search:
+        search_query = st.text_input("🔍 Поиск по задачам", placeholder="Введите название...")
+    with col_filter:
+        filter_status = st.selectbox("Фильтр по статусу", ["Все", "В процессе", "Выполнено"])
 
     with st.form("task_form", clear_on_submit=True):
         task_text = st.text_input("Название фокуса", placeholder="Например: Oтредактировать конфиг")
@@ -625,9 +888,16 @@ if section == "📝 Мой Планшет":
     if submitted and task_text.strip():
         add_task(task_text.strip(), category, day_of_week, task_notes.strip(), priority)
         st.rerun()
+    
+    # ✨ Фильтрация задач
+    filtered_tasks = all_tasks
+    if search_query:
+        filtered_tasks = [t for t in filtered_tasks if search_query.lower() in t['title'].lower()]
+    if filter_status != "Все":
+        filtered_tasks = [t for t in filtered_tasks if t['status'] == filter_status]
             
-    if all_tasks:
-        for t in all_tasks:
+    if filtered_tasks:
+        for t in filtered_tasks:
             is_done = t['status'] == 'Выполнено'
             box_class = "task-box task-completed" if is_done else "task-box"
             prio = t.get('priority', 'Средний ⚡')
@@ -640,9 +910,10 @@ if section == "📝 Мой Планшет":
                         {t['title']}
                     </div>
                     <div class="task-badges">
-                        <span class="custom-badge" style="border-color: {prio_color}; color: {prio_color};">🚨 {prio}</span>
+                        <span class="custom-badge" style="border-color: {prio_color}; color: {prio};">🚨 {prio}</span>
                         <span class="custom-badge" style="border-color: rgba(50, 121, 255, 0.4); color: #60a5fa;">🏷️ {t['category']}</span>
                         <span class="custom-badge" style="border-color: rgba(123, 62, 255, 0.4); color: #c084fc;">📅 {t['day_of_week']}</span>
+                        {f'<span class="custom-badge" style="border-color: rgba(52, 211, 153, 0.4); color: #6ee7b7;">⏱️ Pomodoro: {t.get("pomodoro_sessions", 0)}</span>' if t.get("pomodoro_sessions", 0) > 0 else ''}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -667,8 +938,10 @@ if section == "📝 Мой Планшет":
                             st.info(t["notes"])
                 
                 st.write("")
+    else:
+        st.info("📭 Задач не найдено по вашим критериям")
 
-# РАЗДЕЛ 2: БАЗА МЫСЛЕЙ
+# ========== РАЗДЕЛ 2: БАЗА МЫСЛЕЙ ==========
 elif section == "🧠 База Мыслей":
     st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">🧠 Ментальное Хранилище</p>', unsafe_allow_html=True)
     
@@ -707,7 +980,7 @@ elif section == "🧠 База Мыслей":
     else:
         st.info("💡 Записей еще нет. Создайте первую выше!")
 
-# РАЗДЕЛ 3: ФИНАНСОВЫЙ ХАБ
+# ========== РАЗДЕЛ 3: ФИНАНСОВЫЙ ХАБ ==========
 elif section == "💰 Финансовый Хаб":
     st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">💰 Финансовый Учет и Управление</p>', unsafe_allow_html=True)
     
@@ -737,7 +1010,6 @@ elif section == "💰 Финансовый Хаб":
         t_type = st.radio("Тип операции", ["Доход", "Расход"], horizontal=True)
         amount = st.number_input("Сумма (₸)", min_value=0.0, value=0.0, step=1000.0)
         category = st.selectbox("Выбор категории", ["Бизнес/SaaS 🚀", "Серверы/IT-Инструменты 🌐", "Маркетинг 📊", "Личное 🍕", "Другое 💎"])
-        category = st.selectbox("Выбор категории", ["Серверы/IT-Инструменты 🌐", "Еда/Продукты 🍕", "Спорт/Здоровье 🏋️", "Обучение 📚", "Развлечения/Отдых 🎮", "Долги/Кредиты 💸", "Другое 🎰"])
         description = st.text_input("Комментарий", placeholder="Например: Покупка серверов...")
         fin_submitted = st.form_submit_button("Зарегистрировать операцию", use_container_width=True)
         
@@ -773,28 +1045,247 @@ elif section == "💰 Финансовый Хаб":
     else:
         st.info("💰 Транзакции отсутствуют. Внесите данные выше.")
 
-# РАЗДЕЛ 4: МЕТРИКИ ПРОДУКТИВНОСТИ
+# ========== РАЗДЕЛ 4: МЕТРИКИ ПРОДУКТИВНОСТИ ==========
 elif section == "📊 Метрики Продуктивности":
     st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">📊 Метрики Продуктивности спринта</p>', unsafe_allow_html=True)
     
-    analytics_data = get_all_tasks_for_analytics()
+    analytics_data = get_all_tasks_raw()
     if analytics_data:
         df = pd.DataFrame(analytics_data)
         
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("#### 🎯 Распределение задач по сферам")
-            if "Категория" in df.columns:
-                cat_chart = df["Категория"].value_counts()
+            if "category" in df.columns:
+                cat_chart = df["category"].value_counts()
                 st.bar_chart(cat_chart)
                 
         with col2:
             st.markdown("#### ⚡ Статусы выполнения")
-            if "Статус" in df.columns:
-                status_chart = df["Статус"].value_counts()
+            if "status" in df.columns:
+                status_chart = df["status"].value_counts()
                 st.bar_chart(status_chart)
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            st.markdown("#### 🔥 Распределение по приоритету")
+            if "priority" in df.columns:
+                prio_chart = df["priority"].value_counts()
+                st.bar_chart(prio_chart)
+        
+        with col4:
+            st.markdown("#### 📅 Задачи по дням недели")
+            if "day_of_week" in df.columns:
+                day_chart = df["day_of_week"].value_counts().reindex(DAYS_ORDER, fill_value=0)
+                st.bar_chart(day_chart)
                 
         st.markdown("#### 📋 Общая таблица активностей")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df[['title', 'category', 'status', 'priority', 'day_of_week']], use_container_width=True)
     else:
         st.info("📊 База данных пуста. Наполните «Мой Планшет» задачами для генерации аналитики.")
+
+# ========== ✨ РАЗДЕЛ 5: МОИ ПРИВЫЧКИ (НОВОЕ) ==========
+elif section == "✅ Мои Привычки":
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">✅ Трекер Привычек</p>', unsafe_allow_html=True)
+    
+    habits = get_all_habits()
+    
+    with st.form("habit_form", clear_on_submit=True):
+        habit_name = st.text_input("Название привычки", placeholder="Например: Медитация 10 минут")
+        habit_category = st.selectbox("Категория", ["Здоровье", "Обучение", "Продуктивность", "Спорт", "Разное"])
+        habit_frequency = st.selectbox("Частота", ["Ежедневно", "5 раз в неделю", "3 раза в неделю", "По выходным"])
+        habit_submitted = st.form_submit_button("Добавить привычку", use_container_width=True)
+    
+    if habit_submitted and habit_name.strip():
+        add_habit(habit_name.strip(), habit_category, habit_frequency)
+        st.rerun()
+    
+    if habits:
+        st.markdown(f"### Ваши {len(habits)} привычек")
+        
+        today = datetime.now().strftime("%Y-%m-%d")
+        for habit in habits:
+            streak = get_habit_streak(habit['id'])
+            
+            with st.container():
+                st.markdown(f"""
+                <div class="habit-card">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">✅ {habit['name']}</div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                                {habit['category']} • {habit['frequency']}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #22c55e;">🔥 {streak}</div>
+                            <div style="font-size: 0.7rem; color: #94a3b8;">дней подряд</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("✅ Выполнено сегодня", key=f"habit_done_{habit['id']}", use_container_width=True):
+                        log_habit(habit['id'], today, True)
+                        st.success("Привычка отмечена! 🎉")
+                        st.rerun()
+                
+                with col2:
+                    if st.button("⏭️ Пропустить", key=f"habit_skip_{habit['id']}", use_container_width=True):
+                        log_habit(habit['id'], today, False)
+                        st.rerun()
+                
+                with col3:
+                    if st.button("🗑️ Удалить", key=f"del_habit_{habit['id']}", use_container_width=True):
+                        delete_habit(habit['id'])
+                        st.rerun()
+                
+                st.write("")
+    else:
+        st.info("🌱 Пока нет привычек. Создайте первую привычку для отслеживания!")
+
+# ========== ✨ РАЗДЕЛ 6: МОИ ЦЕЛИ (НОВОЕ) ==========
+elif section == "🎯 Мои Цели":
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">🎯 Система Целей</p>', unsafe_allow_html=True)
+    
+    goals = get_all_goals()
+    
+    with st.form("goal_form", clear_on_submit=True):
+        goal_title = st.text_input("Название цели", placeholder="Например: Запустить стартап")
+        goal_desc = st.text_area("Описание и детали", height=80)
+        goal_category = st.selectbox("Категория", ["Бизнес", "Карьера", "Личное развитие", "Здоровье", "Финансы", "Отношения"])
+        goal_target = st.date_input("Целевая дата")
+        goal_submitted = st.form_submit_button("Создать цель", use_container_width=True)
+    
+    if goal_submitted and goal_title.strip():
+        add_goal(goal_title.strip(), goal_desc.strip(), goal_category, goal_target.strftime("%Y-%m-%d"))
+        st.rerun()
+    
+    if goals:
+        # Разделить цели на активные и завершенные
+        active_goals = [g for g in goals if g['status'] == 'Активна']
+        completed_goals = [g for g in goals if g['status'] == 'Завершена']
+        
+        if active_goals:
+            st.markdown("### 🚀 Активные цели")
+            for goal in active_goals:
+                days_left = (datetime.strptime(goal['target_date'], "%Y-%m-%d") - datetime.now()).days
+                
+                with st.container():
+                    st.markdown(f"""
+                    <div class="goal-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">🎯 {goal['title']}</div>
+                                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">{goal['description'][:100]}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span class="custom-badge" style="border-color: rgba(249, 115, 22, 0.4); color: #fb923c;">{goal['category']}</span>
+                                <div style="font-size: 0.7rem; color: {'#10b981' if days_left > 0 else '#f43f5e'}; margin-top: 4px; font-weight: 600;">
+                                    {'Осталось ' + str(days_left) + ' дней' if days_left > 0 else 'Просрочено!'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;">Прогресс: {goal['progress']}%</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Прогресс бар
+                    st.progress(goal['progress'] / 100)
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        new_progress = st.slider("Прогресс", 0, 100, goal['progress'], key=f"goal_progress_{goal['id']}")
+                        if st.button("💾 Сохранить", key=f"save_goal_{goal['id']}", use_container_width=True):
+                            update_goal_progress(goal['id'], new_progress)
+                            st.rerun()
+                    
+                    with col2:
+                        st.markdown("")
+                    
+                    with col3:
+                        if st.button("🗑️ Удалить", key=f"del_goal_{goal['id']}", use_container_width=True):
+                            delete_goal(goal['id'])
+                            st.rerun()
+                    
+                    st.write("")
+        
+        if completed_goals:
+            st.markdown("### ✨ Завершенные цели")
+            for goal in completed_goals:
+                st.markdown(f"""
+                <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 10px;">
+                    <span style="color: #6ee7b7; font-weight: 600;">✓ {goal['title']}</span>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">{goal['category']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("🎯 Целей еще нет. Создайте первую цель!")
+
+# ========== ✨ РАЗДЕЛ 7: ЕЖЕНЕДЕЛЬНЫЙ ОТЧЕТ (НОВОЕ) ==========
+elif section == "📈 Еженедельный Отчет":
+    st.markdown('<p style="font-size: 1.35rem; font-weight: 600; color: #fff;">📈 Еженедельный Отчет</p>', unsafe_allow_html=True)
+    
+    report = generate_weekly_report()
+    
+    if report:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("📋 Всего задач", report['total_tasks'])
+        with col2:
+            st.metric("✅ Завершено", report['completed_tasks'])
+        with col3:
+            st.metric("⚡ Эффективность", f"{int(report['completion_rate'])}%")
+        with col4:
+            st.metric("🎯 Активные", report['total_tasks'] - report['completed_tasks'])
+        
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("💰 Доход за неделю", f"{report['weekly_income']:,.0f} ₸")
+        with col2:
+            st.metric("💸 Расход за неделю", f"{report['weekly_expense']:,.0f} ₸")
+        with col3:
+            net = report['net_balance']
+            st.metric("📊 Чистый результат", f"{net:,.0f} ₸", delta=f"{'Прибыль' if net > 0 else 'Убыток'}")
+        
+        st.markdown("---")
+        
+        st.markdown("### 📊 Анализ")
+        st.write(f"""
+        **На этой неделе:**
+        - Вы выполнили **{report['completed_tasks']} из {report['total_tasks']}** задач ({int(report['completion_rate'])}% эффективности)
+        - Создали **{report['total_notes']}** заметок
+        - Отслеживали **{report['total_habits']}** привычек
+        - Заработали **{report['weekly_income']:,.0f} ₸** и потратили **{report['weekly_expense']:,.0f} ₸**
+        """)
+        
+        # ✨ Экспорт данных
+        st.markdown("---")
+        st.markdown("### 💾 Экспорт данных")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            csv_data = export_tasks_to_csv()
+            if csv_data:
+                st.download_button(
+                    label="📥 Загрузить задачи (CSV)",
+                    data=csv_data,
+                    file_name=f"tasks_{datetime.now().strftime('%Y-%m-%d')}.csv",
+                    mime="text/csv"
+                )
+        
+        with col2:
+            json_data = export_all_data_json()
+            if json_data:
+                st.download_button(
+                    label="📥 Загрузить все данные (JSON)",
+                    data=json_data,
+                    file_name=f"focus_space_backup_{datetime.now().strftime('%Y-%m-%d')}.json",
+                    mime="application/json"
+                )
